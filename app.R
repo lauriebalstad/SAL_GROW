@@ -17,7 +17,7 @@ coho_grow <- function(temp_vect, prey_index_vect, prop_indigest_vect, days) {
   CK1 <- 0.36; CK4 <- 0.01
   # respiration
   RA <- 0.00264; RB <- -0.217; RQ <- 0.06818; RTO <- 0.0234
-  RK4 <- 0.13 # RTM <- 0; RTL <- 25; RK1 <- 1
+  RK4 <- 0.13; RTM <- 0; RTL <- 25; RK1 <- 1
   ACT <- 9.7; BACT <- 0.0405 # SDA <- 0.172
   # excretion
   FA <- 0.212; FB <- -0.222; FG <- 0.631
@@ -64,48 +64,6 @@ coho_grow <- function(temp_vect, prey_index_vect, prop_indigest_vect, days) {
   return(W_list)
   
 }
-
-# test it
-day_list <- 1:365
-temp_vect_test <- 0.5 + 5*sin(day_list/120) + rnorm(365, 0, 0.2)
-prey_index_test <- rep(0.5, 365) + rnorm(365, 0, 1)
-prop_indg_test <- rbinom(365, 100, 0.2)/100
-test_grow <- coho_grow(temp_vect_test, prey_index_test, prop_indg_test, 365)
-plot(test_grow)
-# yay!
-
-#' okay so what will the shiny app have.... probably like:
-#' proportion of glacial & rain streams 
-#' ---> so then modeling growth in each plus combined possible growth
-#' ---> but need to think through how the combined will look (e.g., proportion of each is time spent in each?)
-#' max temp in each
-#' food in each + dial for amount of digestible food
-
-# glacier temps flatter, around 4 degrees year round
-# rain temps more seasonal, from 0-10 degrees
-max_rain_temp <- 10; sin_max_rain_temp <- max_rain_temp/2
-rain_temps <- sin_max_rain_temp + 1 + sin_max_rain_temp*sin(day_list/67) + rnorm(365, 0, 1)
-rain_temps[which(rain_temps < 0)] <- 0.001 # make sure all above 0
-max_glcr_temp <- 5; sin_max_glcr_temp <- max_glcr_temp/2
-glcr_temps <- sin_max_glcr_temp + 1 + sin_max_glcr_temp*sin(day_list/80 - 99) + rnorm(365, 0, 1)
-glcr_temps[which(glcr_temps < 0)] <- 0.001 # make sure all above 0
-
-# both have same amount of food generally, but glacier food comes earlier
-# glacier food peaks in april-may, rain food peaks june-august
-max_prey_rain <- 0.1
-prey_index_rain <- max_prey_rain + 0.5 + max_prey_rain*sin(day_list/100+0.1) + rnorm(365, 0, 0.2)
-prey_index_rain[which(prey_index_rain < 0)] <- 0.001 # make sure all above 0
-prop_indg_rain <- rbinom(365, 100, 0.6)/100
-max_prey_glcr <- 0.1
-prey_index_glcr <- max_prey_glcr + 0.5 + max_prey_glcr*sin(day_list/100+1) + rnorm(365, 0, 0.2)
-prey_index_glcr[which(prey_index_glcr < 0)] <- 0.001 # make sure all above 0
-prop_indg_glcr <- rbinom(365, 100, 0.1)/100
-
-#' now add how many streams are glacier v. rain
-#' will be way more complex.... will need to change function to have p(in glacier/rain), and return three growth curves
-#' also need to think about preference v. number of streams: 
-#' e.g., if better to be in glacier, should be more likely to be in glacier, but limited by percent of streams that are 
-
 # okay so that's seperate growth
 # now need one that's combined
 move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_vect_g, prop_indigest_vect_r, prop_indigest_vect_g, prop_g, days) {
@@ -119,7 +77,7 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
   CK1 <- 0.36; CK4 <- 0.01
   # respiration
   RA <- 0.00264; RB <- -0.217; RQ <- 0.06818; RTO <- 0.0234
-  RK4 <- 0.13 # RTM <- 0; RTL <- 25; RK1 <- 1
+  RK4 <- 0.13; RTM <- 0; RTL <- 25; RK1 <- 1
   ACT <- 9.7; BACT <- 0.0405 # SDA <- 0.172
   # excretion
   FA <- 0.212; FB <- -0.222; FG <- 0.631
@@ -187,6 +145,7 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
     river_comp <- ifelse(river_comp < 0, 0, river_comp); river_comp <- ifelse(river_comp > 1, 1, river_comp)
     pref_glacier <- rbinom(1, 1, river_comp)
     glacier_res <- prob_in_glacier + pref_glacier
+    daily_growth_m <- NA
     # if wants to be in glacier and can be, grow at glacier rate
     # if mixed, flip a coin
     # if wants to be in river and can be, grow at river rate
@@ -202,19 +161,6 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
   
 }
 
-# so run the model twice
-rain_grow <- coho_grow(rain_temps, prey_index_rain, prop_indg_rain, 365)
-glcr_grow <- coho_grow(glcr_temps, prey_index_glcr, prop_indg_glcr, 365)
-# testing plot
-plot(rain_grow, col = "lightgreen", type = "l", lwd = 2); lines(glcr_grow, col = "lightblue", lwd = 2)
-# add movement growth
-max_grow <- move_grow(rain_temps, glcr_temps, prey_index_rain, prey_index_glcr, prop_indg_rain, prop_indg_glcr, 0.2, 365)
-lines(max_grow, col = "gray", lwd = 2)
-# together, you get differnt growth than alone
-# there's a few combos where together can be more (e.g., rain has crappy food and there are some glacier streams)
-# but generally, better to be in rain, unless the rain is hot (e.g. above 16 degrees)
-# also need to convert input temp into F for students
-
 #' okay... so now need to shiny this mess
 #' will basically run the two functions and then plot
 #' possible sliders:
@@ -223,6 +169,208 @@ lines(max_grow, col = "gray", lwd = 2)
 #' ---> proportion of streams that are glacier (1)
 #' what are some possible takeaways?
 #' ---> prey amount and quality changes salmon growth (looking at one river with fixed temperature regime)
-#' ---> salmon can grow the most when they can move between streams, and they don't grow if it gets too hot (looking at two rivers with fixed prey inputs, but can alter number of streams)
+#' ---> salmon can grow the most when they can move between streams, and they don't grow if it gets too hot (looking at two rivers with fixed prey inputs, but can alter temps & number of streams)
 #' ---> prey amount, quality, and temperature have non-linear affects on salmon growth (one river, but now can change all three things about it)
-#' ---> food web mosaics can benefit salmon (full set up, with lots of guidance)
+#' ---> food web mosaics can benefit salmon (full set up, with lots of guidance) -- SKIPPING
+
+cards <- list(
+  # one river output
+  card(full_screen = TRUE,
+       card_header("Coho salmon growth"), 
+       plotOutput(outputId = "prey_river_plot")),
+  card(full_screen = TRUE,
+       card_header("Coho salmon growth"), 
+       plotOutput(outputId = "one_river_plot")),
+  # two river output
+  card(full_screen = TRUE,
+       card_header("Coho salmon growth"), 
+       plotOutput(outputId = "two_river_plot"))
+)
+
+# for ui/server: https://shiny.posit.co/r/gallery/application-layout/shiny-theme-selector/
+
+prey_amount <- sliderInput(
+  inputId = "prey_amount", 
+  label = "Prey amount (qualitative):",
+  min = 1, max = 100,
+  value = 48, step = 0.5
+)
+
+prey_quality <- sliderInput(
+  inputId = "prey_quality", 
+  label = "Prey quality (percent non-digestable):",
+  min = 0, max = 100,
+  value = 26, step = 0.5
+)
+
+rain_temp <- sliderInput(
+  inputId = "rain_temp", 
+  label = "Rain river temperature:",
+  min = 8, max = 28,
+  value = 12, step = 0.5
+)
+
+glcr_temp <- sliderInput(
+  inputId = "glcr_temp", 
+  label = "Glacier river temperature:",
+  min = 2, max = 12,
+  value = 4, step = 1
+)
+
+prop_glcr <- sliderInput(
+  inputId = "prop_glcr", 
+  label = "Percent glacial streams:",
+  min = 0, max = 100,
+  value = 27, step = 0.5
+)
+
+ui = tagList(
+  # shinythemes::themeSelector(),
+  navbarPage(
+    theme = shinythemes::shinytheme("yeti"),
+    "Understanding SEAK Coho salmon growth",
+    
+    tabPanel("About",
+             renderText(includeHTML("background.html")) # drop in text
+    ),
+    tabPanel("Lesson plans",
+             renderText(includeHTML("background.html")) # drop in text
+    ),
+    tabPanel("Prey quality",
+             sidebarPanel(
+               prey_amount,
+               prey_quality
+             ),
+             mainPanel(
+                       cards[[1]]
+                       )
+    ),
+    tabPanel("Temperature & consumption",
+             sidebarPanel(
+               rain_temp,
+               prey_amount,
+               prey_quality
+             ),
+             mainPanel(renderText(includeHTML("background.html")), # drop in text
+                       cards[[2]]
+             )
+    ),
+    tabPanel("A warming world",
+             sidebarPanel(
+               rain_temp, 
+               glcr_temp,
+               prop_glcr
+             ),
+             mainPanel(renderText(includeHTML("background.html")), # drop in text
+                       cards[[3]]
+                       )
+    )
+))
+
+server <- function(input, output, session) {
+  
+  # run simulation with reactive data
+  reactive_data <- reactive({
+    
+    day_list <- 1:365
+    
+    # make time series
+    # glacier temps flatter, around 4 degrees year round
+    # rain temps more seasonal, from 0-10 degrees
+    max_rain_temp <- input$rain_temp; sin_max_rain_temp <- max_rain_temp/2
+    rain_temps <- sin_max_rain_temp + 1 + sin_max_rain_temp*sin(day_list/67) + rnorm(365, 0, 1)
+    rain_temps[which(rain_temps < 0)] <- 0.001 # make sure all above 0
+    max_glcr_temp <- input$glcr_temp; sin_max_glcr_temp <- max_glcr_temp/2
+    glcr_temps <- sin_max_glcr_temp + 1 + sin_max_glcr_temp*sin(day_list/80 - 99) + rnorm(365, 0, 1)
+    glcr_temps[which(glcr_temps < 0)] <- 0.001 # make sure all above 0
+    
+    # both have same amount of food generally, but glacier food comes earlier
+    # glacier food peaks in april-may, rain food peaks june-august
+    # rain things
+    max_prey_rain <- input$prey_amount/500 + 0.001
+    prey_index_rain <- max_prey_rain + 0.5 + max_prey_rain*sin(day_list/100+0.1) + rnorm(365, 0, 0.2)
+    prey_index_rain[which(prey_index_rain < 0)] <- 0.001 # make sure all above 0
+    prop_indg_rain <- rbinom(365, 100, input$prey_quality/100)/100
+    # glacier things -- same amount, diff period, but better quality food
+    max_prey_glcr <- input$prey_amount/500 + 0.001
+    prey_index_glcr <- max_prey_glcr + 0.5 + max_prey_glcr*sin(day_list/100+1) + rnorm(365, 0, 0.2)
+    prey_index_glcr[which(prey_index_glcr < 0)] <- 0.001 # make sure all above 0
+    prop_indg_glcr <- rbinom(365, 100, 0.1)/100
+    
+    # run simulation
+    # rain river
+    sim_dat_rain <- coho_grow(rain_temps, prey_index_rain, prop_indg_rain, 365) 
+    
+    # glcr river
+    sim_dat_glcr <- coho_grow(glcr_temps, prey_index_glcr, prop_indg_glcr, 365) 
+    
+    # mixed river
+    sim_dat_combo <- move_grow(rain_temps, glcr_temps, 
+                               prey_index_rain, prey_index_glcr, 
+                               prop_indg_rain, prop_indg_glcr, 
+                               input$prop_glcr/100, 
+                               365)
+    
+    dat_out <- data.frame(day = rep(1:length(sim_dat_combo), 3), 
+                          sal_size = c(sim_dat_rain, sim_dat_glcr, sim_dat_combo), 
+                          river_type = c(rep("Rain river", length(sim_dat_combo)), 
+                                   rep("Glacier river", length(sim_dat_combo)),
+                                   rep("Movement between rivers", length(sim_dat_combo)))
+                          )
+    return(dat_out)
+    
+  })
+  
+  output$prey_river_plot <- renderPlot({
+    
+    plotData <- subset(reactive_data(), reactive_data()$river_type == "Rain river")
+    
+    # reactive_data() %>% filter(river_type == "Rain river")
+    
+    ggplot(plotData) + 
+      geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
+      labs(col="River type", y="Coho size (grams)") + 
+      scale_color_manual(values = c("#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+      theme_classic() + theme(text = element_text(size = 14), 
+                              legend.position = "bottom")
+    
+  })
+  
+  output$one_river_plot <- renderPlot({
+    
+      plotData <- subset(reactive_data(), reactive_data()$river_type == "Rain river")
+      
+      # reactive_data() %>% filter(river_type == "Rain river")
+    
+      ggplot(plotData) + 
+        geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
+        labs(col="River type", y="Coho size (grams)") + 
+        scale_color_manual(values = c("#95d840")) + 
+        scale_linewidth_manual(values = c(1.5)) + 
+        coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+        theme_classic() + theme(text = element_text(size = 14), 
+                                legend.position = "bottom")
+    
+  })
+  
+  output$two_river_plot <- renderPlot({
+    
+    ggplot(reactive_data()) + 
+      geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
+      labs(col="River type", y="Coho size (grams)") + 
+      scale_color_manual(values = c("#33638d", "gray75", "#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+      theme_classic() + theme(text = element_text(size = 14), 
+                              legend.position = "bottom")
+    
+  })
+  
+} 
+
+shinyApp(ui, server) # run the shiny
+
+#' issues: 
+#' one river not working???
