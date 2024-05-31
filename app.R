@@ -206,15 +206,15 @@ prey_quality <- sliderInput(
 rain_temp <- sliderInput(
   inputId = "rain_temp", 
   label = "Rain river temperature:",
-  min = 8, max = 28,
-  value = 12, step = 0.5
+  min = 46, max = 72,
+  value = 53, step = 0.5
 )
 
 glcr_temp <- sliderInput(
   inputId = "glcr_temp", 
   label = "Glacier river temperature:",
-  min = 2, max = 12,
-  value = 4, step = 1
+  min = 35, max = 61,
+  value = 39, step = 0.5
 )
 
 prop_glcr <- sliderInput(
@@ -231,29 +231,26 @@ ui = tagList(
     "Understanding SEAK Coho salmon growth",
     
     tabPanel("About",
-             renderText(includeHTML("background.html")) # drop in text
+             htmlOutput(outputId = "about_text") # drop in text
     ),
     tabPanel("Lesson plans",
-             renderText(includeHTML("background.html")) # drop in text
+             htmlOutput(outputId = "lesson_text") # drop in text
     ),
     tabPanel("Prey quality",
              sidebarPanel(
                prey_amount,
                prey_quality
              ),
-             mainPanel(
-                       cards[[1]]
-                       )
+             mainPanel(cards[[1]], 
+                       htmlOutput(outputId = "prey_quality_text"))
     ),
     tabPanel("Temperature & consumption",
              sidebarPanel(
                rain_temp,
-               prey_amount,
-               prey_quality
+               prey_amount
              ),
-             mainPanel(renderText(includeHTML("background.html")), # drop in text
-                       cards[[2]]
-             )
+             mainPanel(cards[[2]], 
+                       htmlOutput(outputId = "temp_consump_text"))
     ),
     tabPanel("A warming world",
              sidebarPanel(
@@ -261,9 +258,8 @@ ui = tagList(
                glcr_temp,
                prop_glcr
              ),
-             mainPanel(renderText(includeHTML("background.html")), # drop in text
-                       cards[[3]]
-                       )
+             mainPanel(cards[[3]], 
+                       htmlOutput(outputId = "warming_world_text"))
     )
 ))
 
@@ -274,13 +270,16 @@ server <- function(input, output, session) {
     
     day_list <- 1:365
     
+    rain_cels <- (input$rain_temp-32)*5/9
+    glcr_cels <- (input$glcr_temp-32)*5/9
+    
     # make time series
     # glacier temps flatter, around 4 degrees year round
     # rain temps more seasonal, from 0-10 degrees
-    max_rain_temp <- input$rain_temp; sin_max_rain_temp <- max_rain_temp/2
+    max_rain_temp <- rain_cels; sin_max_rain_temp <- max_rain_temp/2
     rain_temps <- sin_max_rain_temp + 1 + sin_max_rain_temp*sin(day_list/67) + rnorm(365, 0, 1)
     rain_temps[which(rain_temps < 0)] <- 0.001 # make sure all above 0
-    max_glcr_temp <- input$glcr_temp; sin_max_glcr_temp <- max_glcr_temp/2
+    max_glcr_temp <- glcr_cels; sin_max_glcr_temp <- max_glcr_temp/2
     glcr_temps <- sin_max_glcr_temp + 1 + sin_max_glcr_temp*sin(day_list/80 - 99) + rnorm(365, 0, 1)
     glcr_temps[which(glcr_temps < 0)] <- 0.001 # make sure all above 0
     
@@ -321,6 +320,9 @@ server <- function(input, output, session) {
     
   })
   
+  output$about_text <- renderText(includeHTML("about_text.html"))
+  output$lesson_text <- renderText(includeHTML("lesson_text.html"))
+  
   output$prey_river_plot <- renderPlot({
     
     plotData <- subset(reactive_data(), reactive_data()$river_type == "Rain river")
@@ -337,6 +339,7 @@ server <- function(input, output, session) {
                               legend.position = "bottom")
     
   })
+  output$prey_quality_text <- renderText(includeHTML("prey_quality_text.html"))
   
   output$one_river_plot <- renderPlot({
     
@@ -354,6 +357,7 @@ server <- function(input, output, session) {
                                 legend.position = "bottom")
     
   })
+  output$temp_consump_text <- renderText(includeHTML("temp_consump_text.html"))
   
   output$two_river_plot <- renderPlot({
     
@@ -367,10 +371,8 @@ server <- function(input, output, session) {
                               legend.position = "bottom")
     
   })
+  output$warming_world_text <- renderText(includeHTML("warming_world_text.html"))
   
 } 
 
 shinyApp(ui, server) # run the shiny
-
-#' issues: 
-#' one river not working???
