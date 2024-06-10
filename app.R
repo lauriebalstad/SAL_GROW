@@ -174,7 +174,8 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
 #' ---> prey amount, quality, and temperature have non-linear affects on salmon growth (one river, but now can change all three things about it)
 #' ---> food web mosaics can benefit salmon (full set up, with lots of guidance) -- SKIPPING
 
-cards <- list(
+# output card set up
+{cards <- list(
   # one river output
   card(# full_screen = TRUE,
        card_header("Coho salmon growth"), 
@@ -188,7 +189,7 @@ cards <- list(
   card(# full_screen = TRUE,
        card_header("Coho salmon growth"), 
        plotOutput(outputId = "two_river_plot"))
-)
+)}
 
 # for ui/server: https://shiny.posit.co/r/gallery/application-layout/shiny-theme-selector/
 
@@ -204,7 +205,7 @@ prey_quality <- sliderInput(
   inputId = "prey_quality", 
   label = "Prey quality (percent digestable):",
   min = 0, max = 100,
-  value = 26, step = 0.5
+  value = 82, step = 0.5
 )
 
 rain_temp <- sliderInput(
@@ -228,7 +229,8 @@ prop_glcr <- sliderInput(
   value = 27, step = 0.5
 )}
 
-ui = tagList(
+# ui
+{ui = tagList(
   # shinythemes::themeSelector(),
   navbarPage(
     theme = shinythemes::shinytheme("yeti"),
@@ -284,8 +286,9 @@ ui = tagList(
              ),
              htmlOutput(outputId = "warming_world_text"))
     )
-))
+  ))}
 
+# server
 server <- function(input, output, session) {
   
   # run simulation with reactive data
@@ -389,7 +392,7 @@ server <- function(input, output, session) {
         labs(col="River type", x="Date", y="Coho size (grams)") + 
         scale_color_manual(values = c("#95d840")) + 
         scale_linewidth_manual(values = c(1.5)) + 
-        coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+        coord_cartesian(ylim = c(0, 25)) + # force fixed axis
         theme_classic() + theme(text = element_text(size = 14), 
                                 legend.position = "bottom")
     
@@ -403,7 +406,7 @@ server <- function(input, output, session) {
       labs(col="River type", x="Date", y="Coho size (grams)") + 
       scale_color_manual(values = c("gray75", "#33638d", "#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
-      coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+      coord_cartesian(ylim = c(0, 25)) + # force fixed axis
       theme_classic() + theme(text = element_text(size = 14), 
                               legend.position = "bottom")
     
