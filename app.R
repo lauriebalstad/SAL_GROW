@@ -2,6 +2,7 @@ library(shiny) # get the things to make the shiny shiny
 library(bslib) # library of themes to use
 library(ggplot2) # need ggplot for final plot
 library(dplyr) # need for final plot
+library(lubridate) # need for some date plotting
 
 # set of instructions in html file
 
@@ -175,21 +176,24 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
 
 cards <- list(
   # one river output
-  card(full_screen = TRUE,
+  card(# full_screen = TRUE,
        card_header("Coho salmon growth"), 
-       plotOutput(outputId = "prey_river_plot")),
-  card(full_screen = TRUE,
+       plotOutput(outputId = "prey_river_plot"), 
+       height = "500px"),
+  card(# full_screen = TRUE,
        card_header("Coho salmon growth"), 
-       plotOutput(outputId = "one_river_plot")),
+       plotOutput(outputId = "one_river_plot"), 
+       height = "500px"),
   # two river output
-  card(full_screen = TRUE,
+  card(# full_screen = TRUE,
        card_header("Coho salmon growth"), 
        plotOutput(outputId = "two_river_plot"))
 )
 
 # for ui/server: https://shiny.posit.co/r/gallery/application-layout/shiny-theme-selector/
 
-prey_amount <- sliderInput(
+# sliders
+{prey_amount <- sliderInput(
   inputId = "prey_amount", 
   label = "Prey amount (qualitative):",
   min = 1, max = 100,
@@ -198,7 +202,7 @@ prey_amount <- sliderInput(
 
 prey_quality <- sliderInput(
   inputId = "prey_quality", 
-  label = "Prey quality (percent non-digestable):",
+  label = "Prey quality (percent digestable):",
   min = 0, max = 100,
   value = 26, step = 0.5
 )
@@ -222,7 +226,7 @@ prop_glcr <- sliderInput(
   label = "Percent glacial streams:",
   min = 0, max = 100,
   value = 27, step = 0.5
-)
+)}
 
 ui = tagList(
   # shinythemes::themeSelector(),
@@ -241,7 +245,10 @@ ui = tagList(
                prey_amount,
                prey_quality
              ),
-             mainPanel(cards[[1]], 
+             mainPanel(layout_columns(cards[[1]], 
+                                      card(card_header("Prey avalibility"), 
+                                           plotOutput(outputId = "prey_plot_1"), 
+                                           height = "500px")),
                        htmlOutput(outputId = "prey_quality_text"))
     ),
     tabPanel("Temperature & consumption",
@@ -249,7 +256,15 @@ ui = tagList(
                rain_temp,
                prey_amount
              ),
-             mainPanel(cards[[2]], 
+             mainPanel(layout_columns(cards[[2]], 
+                                      layout_columns(card(card_header("Prey avalibility"), 
+                                                          plotOutput(outputId = "prey_plot_2"), 
+                                                          height = "250px"), 
+                                                     card(card_header("River temperature"), 
+                                                          plotOutput(outputId = "temp_plot_2"), 
+                                                          height = "250px"), 
+                                                     col_widths = c(9, 12))
+                                      ),
                        htmlOutput(outputId = "temp_consump_text"))
     ),
     tabPanel("A warming world",
@@ -258,8 +273,16 @@ ui = tagList(
                glcr_temp,
                prop_glcr
              ),
-             mainPanel(cards[[3]], 
-                       htmlOutput(outputId = "warming_world_text"))
+             mainPanel(layout_columns(cards[[3]], 
+                                      layout_columns(card(card_header("Prey avalibility"), 
+                                                          plotOutput(outputId = "prey_plot_3"), 
+                                                          height = "250px"), 
+                                                     card(card_header("River temperature"), 
+                                                          plotOutput(outputId = "temp_plot_3"), 
+                                                          height = "250px"), 
+                                                     col_widths = c(9, 12))
+             ),
+             htmlOutput(outputId = "warming_world_text"))
     )
 ))
 
@@ -277,22 +300,22 @@ server <- function(input, output, session) {
     # glacier temps flatter, around 4 degrees year round
     # rain temps more seasonal, from 0-10 degrees
     max_rain_temp <- rain_cels; sin_max_rain_temp <- max_rain_temp/2
-    rain_temps <- sin_max_rain_temp + 1 + sin_max_rain_temp*sin(day_list/67) + rnorm(365, 0, 1)
+    rain_temps <- sin_max_rain_temp + 1 + sin_max_rain_temp*sin(day_list/67) + rnorm(365, 0, 0.5)
     rain_temps[which(rain_temps < 0)] <- 0.001 # make sure all above 0
     max_glcr_temp <- glcr_cels; sin_max_glcr_temp <- max_glcr_temp/2
-    glcr_temps <- sin_max_glcr_temp + 1 + sin_max_glcr_temp*sin(day_list/80 - 99) + rnorm(365, 0, 1)
+    glcr_temps <- sin_max_glcr_temp + 1 + sin_max_glcr_temp*sin(day_list/80 - 99) + rnorm(365, 0, 0.5)
     glcr_temps[which(glcr_temps < 0)] <- 0.001 # make sure all above 0
     
     # both have same amount of food generally, but glacier food comes earlier
     # glacier food peaks in april-may, rain food peaks june-august
     # rain things
     max_prey_rain <- input$prey_amount/500 + 0.001
-    prey_index_rain <- max_prey_rain + 0.5 + max_prey_rain*sin(day_list/100+0.1) + rnorm(365, 0, 0.2)
+    prey_index_rain <- max_prey_rain + 0.5 + max_prey_rain*sin(day_list/100+0.1) + rnorm(365, 0, 0.015)
     prey_index_rain[which(prey_index_rain < 0)] <- 0.001 # make sure all above 0
-    prop_indg_rain <- rbinom(365, 100, input$prey_quality/100)/100
+    prop_indg_rain <- rbinom(365, 100, (100-input$prey_quality)/100)/100
     # glacier things -- same amount, diff period, but better quality food
     max_prey_glcr <- input$prey_amount/500 + 0.001
-    prey_index_glcr <- max_prey_glcr + 0.5 + max_prey_glcr*sin(day_list/100+1) + rnorm(365, 0, 0.2)
+    prey_index_glcr <- max_prey_glcr + 0.5 + max_prey_glcr*sin(day_list/100+1) + rnorm(365, 0, 0.015)
     prey_index_glcr[which(prey_index_glcr < 0)] <- 0.001 # make sure all above 0
     prop_indg_glcr <- rbinom(365, 100, 0.1)/100
     
@@ -314,9 +337,23 @@ server <- function(input, output, session) {
                           sal_size = c(sim_dat_rain, sim_dat_glcr, sim_dat_combo), 
                           river_type = c(rep("Rain river", length(sim_dat_combo)), 
                                    rep("Glacier river", length(sim_dat_combo)),
-                                   rep("Movement between rivers", length(sim_dat_combo)))
+                                   rep("Between river\nmovement", length(sim_dat_combo)))
                           )
-    return(dat_out)
+    dat_out$calendar_date <- as.Date(dat_out$day, origin = as.Date("2020-04-01"))
+    
+    rain_cond <- data.frame(river_type = "Rain river", 
+                            temp_F = rain_temps*9/5 + 32,
+                            prey = 100*(prey_index_rain-0.001), 
+                            day = 1:365)
+    rain_cond$calendar_date <- as.Date(rain_cond$day, origin = as.Date("2020-04-01"))
+    glcr_cond <- data.frame(river_type = "Glacier river", 
+                            temp_F = glcr_temps*9/5 + 32,
+                            prey = 100*(prey_index_glcr-0.001), 
+                            day = 1:365)
+    glcr_cond$calendar_date <- as.Date(glcr_cond$day, origin = as.Date("2020-04-01"))
+    all_cond <- rbind(rain_cond, glcr_cond)
+    
+    return(list(dat_out, rain_cond, all_cond))
     
   })
   
@@ -325,16 +362,16 @@ server <- function(input, output, session) {
   
   output$prey_river_plot <- renderPlot({
     
-    plotData <- subset(reactive_data(), reactive_data()$river_type == "Rain river")
+    tmp_dat <- reactive_data()[[1]]
     
-    # reactive_data() %>% filter(river_type == "Rain river")
+    plotData <- tmp_dat %>% filter(river_type == "Rain river")
     
     ggplot(plotData) + 
-      geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
-      labs(col="River type", y="Coho size (grams)") + 
+      geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      labs(col="River type", x="Date", y="Coho size (grams)") + 
       scale_color_manual(values = c("#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
-      coord_cartesian(ylim = c(0, 18)) + # force fixed axis
+      coord_cartesian(ylim = c(0, 24)) + # force fixed axis
       theme_classic() + theme(text = element_text(size = 14), 
                               legend.position = "bottom")
     
@@ -343,13 +380,13 @@ server <- function(input, output, session) {
   
   output$one_river_plot <- renderPlot({
     
-      plotData <- subset(reactive_data(), reactive_data()$river_type == "Rain river")
-      
-      # reactive_data() %>% filter(river_type == "Rain river")
+      tmp_dat <- reactive_data()[[1]]
+    
+      plotData <- tmp_dat %>% filter(river_type == "Rain river")
     
       ggplot(plotData) + 
-        geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
-        labs(col="River type", y="Coho size (grams)") + 
+        geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+        labs(col="River type", x="Date", y="Coho size (grams)") + 
         scale_color_manual(values = c("#95d840")) + 
         scale_linewidth_manual(values = c(1.5)) + 
         coord_cartesian(ylim = c(0, 18)) + # force fixed axis
@@ -361,10 +398,10 @@ server <- function(input, output, session) {
   
   output$two_river_plot <- renderPlot({
     
-    ggplot(reactive_data()) + 
-      geom_line(aes_string(x="day", y="sal_size", col="river_type")) + 
-      labs(col="River type", y="Coho size (grams)") + 
-      scale_color_manual(values = c("#33638d", "gray75", "#95d840")) + 
+    ggplot(reactive_data()[[1]]) + 
+      geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      labs(col="River type", x="Date", y="Coho size (grams)") + 
+      scale_color_manual(values = c("gray75", "#33638d", "#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
       coord_cartesian(ylim = c(0, 18)) + # force fixed axis
       theme_classic() + theme(text = element_text(size = 14), 
@@ -372,6 +409,73 @@ server <- function(input, output, session) {
     
   })
   output$warming_world_text <- renderText(includeHTML("warming_world_text.html"))
+  
+  output$prey_plot_1 <- renderPlot({
+    
+    ggplot(reactive_data()[[2]]) + 
+      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      labs(col="River type", x="Date", y="Prey amount") + 
+      scale_color_manual(values = c("#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(40, 100)) + 
+      theme_classic() + theme(text = element_text(size = 14), 
+                              legend.position = "bottom")
+    
+  })
+  
+  output$prey_plot_2 <- renderPlot({
+    
+    ggplot(reactive_data()[[2]]) + 
+      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      labs(col="River type", x="Date", y="Prey amount") + 
+      scale_color_manual(values = c("#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(40, 100)) + 
+      theme_classic() + theme(text = element_text(size = 10), 
+                              legend.position = "bottom")
+    
+  })
+
+  output$temp_plot_2 <- renderPlot({
+    
+    ggplot(reactive_data()[[2]]) + 
+      geom_hline(aes(yintercept = 32), col = "lightgray", lty = 2) + 
+      geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      labs(col="River type", x="Date", y="River temperature (degrees F)") + 
+      scale_color_manual(values = c("#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(30, 75)) + 
+      theme_classic() + theme(text = element_text(size = 10), 
+                              legend.position = "bottom")
+    
+  })
+  
+  output$prey_plot_3 <- renderPlot({
+    
+    ggplot(reactive_data()[[3]]) + 
+      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      labs(col="River type", x="Date", y="Prey amount") + 
+      scale_color_manual(values = c("#33638d", "#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(40, 100)) + 
+      theme_classic() + theme(text = element_text(size = 10), 
+                              legend.position = "bottom")
+    
+  })
+  
+  output$temp_plot_3 <- renderPlot({
+    
+    ggplot(reactive_data()[[3]]) + 
+      geom_hline(aes(yintercept = 32), col = "lightgray", lty = 2) + 
+      geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      labs(col="River type", x="Date", y="River temperature (degrees F)") + 
+      scale_color_manual(values = c("#33638d", "#95d840")) + 
+      scale_linewidth_manual(values = c(1.5)) + 
+      coord_cartesian(ylim = c(30, 75)) + 
+      theme_classic() + theme(text = element_text(size = 10), 
+                              legend.position = "bottom")
+    
+  })
   
 } 
 
