@@ -239,9 +239,6 @@ prop_glcr <- sliderInput(
     tabPanel("About",
              htmlOutput(outputId = "about_text") # drop in text
     ),
-    tabPanel("Lesson plans",
-             htmlOutput(outputId = "lesson_text") # drop in text
-    ),
     tabPanel("Prey quality",
              sidebarPanel(
                prey_amount,
