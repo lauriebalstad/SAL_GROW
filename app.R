@@ -196,15 +196,22 @@ move_grow <- function(temp_vect_r, temp_vect_g, prey_index_vect_r, prey_index_ve
 # sliders
 {prey_amount <- sliderInput(
   inputId = "prey_amount", 
-  label = "Prey amount (qualitative):",
+  label = "Rain river prey amount (qualitative):",
   min = 1, max = 100,
   value = 48, step = 0.5
 )
 
 prey_quality <- sliderInput(
   inputId = "prey_quality", 
-  label = "Prey quality (percent digestable):",
-  min = 0, max = 100,
+  label = "Rain river prey quality (percent digestable):",
+  min = 1, max = 100,
+  value = 82, step = 0.5
+)
+
+glcr_quality <- sliderInput(
+  inputId = "glcr_quality", 
+  label = "Glacier river prey quality (percent digestable):",
+  min = 1, max = 100,
   value = 82, step = 0.5
 )
 
@@ -253,7 +260,8 @@ prop_glcr <- sliderInput(
     tabPanel("Temperature & consumption",
              sidebarPanel(
                rain_temp,
-               prey_amount
+               prey_amount, 
+               prey_quality
              ),
              mainPanel(layout_columns(cards[[2]], 
                                       layout_columns(card(card_header("Prey avalibility"), 
@@ -317,7 +325,7 @@ server <- function(input, output, session) {
     max_prey_glcr <- input$prey_amount/500 + 0.001
     prey_index_glcr <- max_prey_glcr + 0.5 + max_prey_glcr*sin(day_list/100+1) + rnorm(365, 0, 0.015)
     prey_index_glcr[which(prey_index_glcr < 0)] <- 0.001 # make sure all above 0
-    prop_indg_glcr <- rbinom(365, 100, 0.1)/100
+    prop_indg_glcr <- rbinom(365, 100, (100-input$prey_quality)/100)/100
     
     # run simulation
     # rain river
@@ -366,8 +374,13 @@ server <- function(input, output, session) {
     
     plotData <- tmp_dat %>% filter(river_type == "Rain river")
     
+    x_var <- "calendar_date"
+    y_var <- "sal_size"
+    c_var <- "river_type"
+    
     ggplot(plotData) + 
-      geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="Coho size (grams)") + 
       scale_color_manual(values = c("#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -384,8 +397,13 @@ server <- function(input, output, session) {
     
       plotData <- tmp_dat %>% filter(river_type == "Rain river")
     
+      x_var <- "calendar_date"
+      y_var <- "sal_size"
+      c_var <- "river_type"
+      
       ggplot(plotData) + 
-        geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+        # geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+        geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
         labs(col="River type", x="Date", y="Coho size (grams)") + 
         scale_color_manual(values = c("#95d840")) + 
         scale_linewidth_manual(values = c(1.5)) + 
@@ -398,8 +416,13 @@ server <- function(input, output, session) {
   
   output$two_river_plot <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "sal_size"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[1]]) + 
-      geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="sal_size", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="Coho size (grams)") + 
       scale_color_manual(values = c("gray75", "#33638d", "#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -412,8 +435,13 @@ server <- function(input, output, session) {
   
   output$prey_plot_1 <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "prey"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[2]]) + 
-      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="Prey amount") + 
       scale_color_manual(values = c("#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -425,8 +453,13 @@ server <- function(input, output, session) {
   
   output$prey_plot_2 <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "prey"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[2]]) + 
-      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="Prey amount") + 
       scale_color_manual(values = c("#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -438,9 +471,14 @@ server <- function(input, output, session) {
 
   output$temp_plot_2 <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "temp_F"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[2]]) + 
       geom_hline(aes(yintercept = 32), col = "lightgray", lty = 2) + 
-      geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="River temperature (degrees F)") + 
       scale_color_manual(values = c("#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -452,8 +490,13 @@ server <- function(input, output, session) {
   
   output$prey_plot_3 <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "prey"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[3]]) + 
-      geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="prey", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="Prey amount") + 
       scale_color_manual(values = c("#33638d", "#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 
@@ -465,9 +508,14 @@ server <- function(input, output, session) {
   
   output$temp_plot_3 <- renderPlot({
     
+    x_var <- "calendar_date"
+    y_var <- "temp_F"
+    c_var <- "river_type"
+    
     ggplot(reactive_data()[[3]]) + 
       geom_hline(aes(yintercept = 32), col = "lightgray", lty = 2) + 
-      geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      # geom_line(aes_string(x="calendar_date", y="temp_F", col="river_type")) + 
+      geom_line(aes(x=.data[[x_var]], y=.data[[y_var]], col=.data[[c_var]])) + 
       labs(col="River type", x="Date", y="River temperature (degrees F)") + 
       scale_color_manual(values = c("#33638d", "#95d840")) + 
       scale_linewidth_manual(values = c(1.5)) + 

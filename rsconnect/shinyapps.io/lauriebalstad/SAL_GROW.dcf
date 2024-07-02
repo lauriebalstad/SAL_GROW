@@ -1,0 +1,13 @@
+name: SAL_GROW
+title: SAL_GROW
+username: lauriebalstad
+account: lauriebalstad
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12266352
+bundleId: 8816616
+url: https://lauriebalstad.shinyapps.io/SAL_GROW/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: README.md
