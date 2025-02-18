@@ -252,7 +252,7 @@ prop_glcr <- sliderInput(
                prey_quality
              ),
              mainPanel(layout_columns(cards[[1]], 
-                                      card(card_header("Prey avalibility"), 
+                                      card(card_header("Prey availability"), 
                                            plotOutput(outputId = "prey_plot_1"), 
                                            height = "500px")),
                        htmlOutput(outputId = "prey_quality_text"))
@@ -264,7 +264,7 @@ prop_glcr <- sliderInput(
                prey_quality
              ),
              mainPanel(layout_columns(cards[[2]], 
-                                      layout_columns(card(card_header("Prey avalibility"), 
+                                      layout_columns(card(card_header("Prey availability"), 
                                                           plotOutput(outputId = "prey_plot_2"), 
                                                           height = "250px"), 
                                                      card(card_header("River temperature"), 
@@ -281,7 +281,7 @@ prop_glcr <- sliderInput(
                prop_glcr
              ),
              mainPanel(layout_columns(cards[[3]], 
-                                      layout_columns(card(card_header("Prey avalibility"), 
+                                      layout_columns(card(card_header("Prey availability"), 
                                                           plotOutput(outputId = "prey_plot_3"), 
                                                           height = "250px"), 
                                                      card(card_header("River temperature"), 
